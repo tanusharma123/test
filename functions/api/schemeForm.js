@@ -1,6 +1,5 @@
 export async function onRequestPost(context) {
     const request = context.request;
-
     const formData = await request.formData();
 
     const name = formData.get("name");
@@ -8,10 +7,10 @@ export async function onRequestPost(context) {
     const service = formData.get("service");
     const message = formData.get("message");
 
-    const TO_EMAIL = context.env.TO_EMAIL;       // Receiver (your Gmail)
-    const FROM_EMAIL = context.env.FROM_EMAIL;   // Verified sender domain
+    const TO_EMAIL = context.env.TO_EMAIL;        // Your Gmail (receiver)
+    const FROM_EMAIL = context.env.FROM_EMAIL;    // Must be your domain (NOT Gmail)
 
-    const emailContent = `
+    const content = `
 New Contact Form Submission
 
 Name: ${name}
@@ -26,7 +25,7 @@ ${message}
         personalizations: [
             {
                 to: [{ email: TO_EMAIL }],
-                reply_to: [{ email }]
+                reply_to: [{ email }]            // REQUIRED by MailChannels
             }
         ],
         from: { email: FROM_EMAIL, name: "Website Contact Form" },
@@ -34,7 +33,7 @@ ${message}
         content: [
             {
                 type: "text/plain",
-                value: emailContent
+                value: content
             }
         ]
     };
@@ -45,16 +44,16 @@ ${message}
         body: JSON.stringify(mailData)
     });
 
-    if (response.ok) {
+    if (!response.ok) {
+        const error = await response.text();      // ⭐ See REAL reason why email fails
         return new Response(
-            JSON.stringify({ success: true, message: "Email sent!" }),
-            { status: 200 }
-        );
-    } else {
-        return new Response(
-            JSON.stringify({ success: false, error: "Error sending email." }),
-            { status: 500 }
+            JSON.stringify({ success: false, error }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
         );
     }
-}
 
+    return new Response(
+        JSON.stringify({ success: true, message: "Email sent!" }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+}
