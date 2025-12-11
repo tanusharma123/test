@@ -25,7 +25,8 @@ ${message}
     const mailData = {
         personalizations: [
             {
-                to: [{ email: TO_EMAIL }]
+                to: [{ email: TO_EMAIL }],
+                reply_to: [{ email }]
             }
         ],
         from: { email: FROM_EMAIL, name: "Website Contact Form" },
