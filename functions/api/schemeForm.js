@@ -11,6 +11,7 @@ export async function onRequestPost(context) {
     const TO_EMAIL = context.env.TO_EMAIL;
 
     // Debug: Check if env variables exist
+    //and also check
     if (!RESEND_API_KEY) {
         return new Response(
             JSON.stringify({ success: false, error: "RESEND_API_KEY not set" }),
