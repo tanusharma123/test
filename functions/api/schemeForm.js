@@ -7,16 +7,23 @@ export async function onRequestPost(context) {
     const service = formData.get("service");
     const message = formData.get("message");
 
-    // Validate required fields
-    if (!name || !email || !service || !message) {
+    const RESEND_API_KEY = context.env.RESEND_API_KEY;
+    const TO_EMAIL = context.env.TO_EMAIL;
+
+    // Debug: Check if env variables exist
+    if (!RESEND_API_KEY) {
         return new Response(
-            JSON.stringify({ success: false, error: "All fields are required" }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
+            JSON.stringify({ success: false, error: "RESEND_API_KEY not set" }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
         );
     }
 
-    const RESEND_API_KEY = context.env.RESEND_API_KEY;
-    const TO_EMAIL = context.env.TO_EMAIL;
+    if (!TO_EMAIL) {
+        return new Response(
+            JSON.stringify({ success: false, error: "TO_EMAIL not set" }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+    }
 
     const emailContent = `
 New Contact Form Submission
@@ -37,51 +44,42 @@ ${message}
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                from: "Contact Form <onboarding@resend.dev>",  // Resend's verified sender
+                from: "Contact Form <onboarding@resend.dev>",
                 to: [TO_EMAIL],
-                reply_to: email,  // User's email for easy replies
+                reply_to: email,
                 subject: `New Contact Form: ${service}`,
-                text: emailContent,
-                html: `
-                    <h2>New Contact Form Submission</h2>
-                    <p><strong>Name:</strong> ${name}</p>
-                    <p><strong>Email:</strong> ${email}</p>
-                    <p><strong>Service:</strong> ${service}</p>
-                    <h3>Message:</h3>
-                    <p>${message.replace(/\n/g, '<br>')}</p>
-                `
+                text: emailContent
             })
         });
 
+        const responseText = await response.text();
+        
+        // Return the actual error for debugging
         if (!response.ok) {
-            const error = await response.text();
-            console.error("Resend API error:", error);
             return new Response(
                 JSON.stringify({ 
                     success: false, 
-                    error: "Failed to send email. Please try again." 
+                    error: responseText,
+                    status: response.status
                 }),
                 { status: 500, headers: { "Content-Type": "application/json" } }
             );
         }
 
-        const data = await response.json();
-        console.log("Email sent successfully:", data.id);
-
         return new Response(
             JSON.stringify({ 
                 success: true, 
-                message: "Thank you! Your message has been sent." 
+                message: "Email sent successfully!" 
             }),
             { status: 200, headers: { "Content-Type": "application/json" } }
         );
 
     } catch (err) {
-        console.error("Error sending email:", err);
         return new Response(
             JSON.stringify({ 
                 success: false, 
-                error: "Server error. Please try again later." 
+                error: err.message,
+                stack: err.stack
             }),
             { status: 500, headers: { "Content-Type": "application/json" } }
         );
